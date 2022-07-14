@@ -60,9 +60,11 @@ func NewScheduler(podQueue chan *v1.Pod, quit chan struct{}) Scheduler {
 	}
 }
 
+// 初始化node信息
 func initInformers(clientset *kubernetes.Clientset, podQueue chan *v1.Pod, quit chan struct{}) listersv1.NodeLister {
 	factory := informers.NewSharedInformerFactory(clientset, 0)
 
+	// node添加事件处理 从缓存中获取信息
 	nodeInformer := factory.Core().V1().Nodes()
 	nodeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -75,6 +77,7 @@ func initInformers(clientset *kubernetes.Clientset, podQueue chan *v1.Pod, quit 
 		},
 	})
 
+	// pod的添加事件
 	podInformer := factory.Core().V1().Pods()
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -109,6 +112,7 @@ func main() {
 }
 
 func (s *Scheduler) Run(quit chan struct{}) {
+	// 一直循环运行 直到quit channel被关闭
 	wait.Until(s.ScheduleOne, 0, quit)
 }
 
@@ -168,6 +172,7 @@ func (s *Scheduler) bindPod(p *v1.Pod, node string) error {
 	}, metav1.CreateOptions{})
 }
 
+// 向api-server写入时间通知
 func (s *Scheduler) emitEvent(p *v1.Pod, message string) error {
 	timestamp := time.Now().UTC()
 	_, err := s.clientset.CoreV1().Events(p.Namespace).Create(context.Background(), &v1.Event{
@@ -219,11 +224,6 @@ func (s *Scheduler) predicatesApply(node *v1.Node, pod *v1.Pod) bool {
 	return true
 }
 
-func randomPredicate(node *v1.Node, pod *v1.Pod) bool {
-	r := rand.Intn(2)
-	return r == 0
-}
-
 func (s *Scheduler) prioritize(nodes []*v1.Node, pod *v1.Pod) map[string]int {
 	priorities := make(map[string]int)
 	for _, node := range nodes {
@@ -247,6 +247,13 @@ func (s *Scheduler) findBestNode(priorities map[string]int) string {
 	return bestNode
 }
 
+// 预选算法
+func randomPredicate(node *v1.Node, pod *v1.Pod) bool {
+	r := rand.Intn(2)
+	return r == 0
+}
+
+// 优选算法
 func randomPriority(node *v1.Node, pod *v1.Pod) int {
 	return rand.Intn(100)
 }
