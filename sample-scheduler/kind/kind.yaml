@@ -5,4 +5,4 @@ nodes:
   - role: control-plane
   - role: worker
   - role: worker
-# kind create cluster --name test-scheduler --config kind.yaml
+# kind create cluster --name oneNodePod-scheduler --config kind.yaml

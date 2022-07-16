@@ -18,6 +18,8 @@ import (
 
 const schedulerName = "random-scheduler"
 
+var m = make(map[string]string)
+
 type predicateFunc func(node *v1.Node, pod *v1.Pod) bool
 type priorityFunc func(node *v1.Node, pod *v1.Pod) int
 
@@ -107,9 +109,9 @@ func (s *SchedulerTest) runPredicates(nodes []*v1.Node, pod *v1.Pod) []*v1.Node 
 			filteredNodes = append(filteredNodes, node)
 		}
 	}
-	for _, node := range filteredNodes {
-		log.Println(node.Name)
-	}
+	//for _, node := range filteredNodes {
+	//	log.Println(node.Name)
+	//}
 	return filteredNodes
 }
 
@@ -149,6 +151,7 @@ func (s *SchedulerTest) findBestNode(predicates map[string]int) string {
 }
 
 func (s *SchedulerTest) bindPod(p *v1.Pod, node string) error {
+	m[node] = p.Name
 	return s.client.CoreV1().Pods(p.Namespace).Bind(context.Background(), &v1.Binding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.Name,
@@ -188,7 +191,14 @@ func initInformers(c *kubernetes.Clientset, podQueue chan *v1.Pod, quit chan str
 			if pod.Spec.NodeName == "" && pod.Spec.SchedulerName == schedulerName {
 				podQueue <- pod
 			}
-		}})
+		},
+		DeleteFunc: func(obj interface{}) {
+			pod := obj.(*v1.Pod)
+			if pod.Spec.SchedulerName == schedulerName {
+				delete(m, pod.Spec.NodeName)
+			}
+		},
+	})
 
 	factory.Start(quit)
 	return nodeInformer.Lister()
@@ -197,6 +207,10 @@ func initInformers(c *kubernetes.Clientset, podQueue chan *v1.Pod, quit chan str
 // 预选算法
 func randomPredicate(node *v1.Node, pod *v1.Pod) bool {
 	_ = rand.Intn(2)
+	_, ok := m[node.Name]
+	if ok {
+		return false
+	}
 	return true
 }
 
