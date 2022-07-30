@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: shareprocess
+  name: shareprocess
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shareprocess
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: shareprocess
+    spec:
+      serviceAccountName: shareprocess
+      containers:
+        - image: ylinyang/shareprocess:v1.o
+          name: shareprocess
+          resources: {}
+status: {}
