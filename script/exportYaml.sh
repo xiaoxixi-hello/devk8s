@@ -5,7 +5,7 @@ NAMESPACE=$1
 if [[ -z $NAMESPACE ]]; then
     #statements
     echo "未指定 namespace, 请使用 kubectl get ns 获取 namespace 清单，并选择其中一个 namespace"
-    echo "示例: $0 loan-backend"
+    echo "示例: $0 ops"
     exit 0
 else
     echo "开始从 ${NAMESPACE} 导出数据"
@@ -80,7 +80,7 @@ for n in $(kubectl -n ${NAMESPACE} get -o=name service,deployment,statefulset,da
             .status
         )' | python -c 'import sys, yaml, json; yaml.safe_dump(json.load(sys.stdin), sys.stdout, default_flow_style=False)' > "${NAMESPACE}/${RESOURCE_KIND}/${RESOURCE_NAME}.yaml"
 
-    # 将serivce 设置为 ClusterIP 类型，避免从平台申请 lb 地址
+    # 将serivce 设置为 ClusterIP 类型，避免云平台场景 从平台申请 lb 地址 
     if [[ ${RESOURCE_KIND} = "service" ]]; then
         sed "/type:/c\type: ClusterIP" -i ${NAMESPACE}/${RESOURCE_KIND}/${RESOURCE_NAME}.yaml
         sed "/nodePort/d" -i ${NAMESPACE}/${RESOURCE_KIND}/${RESOURCE_NAME}.yaml
